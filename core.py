@@ -12,55 +12,40 @@ from sklearn import model_selection
 
 import matplotlib.pyplot as plt
 
-N=100
-throws_data = gen.roc_throws(N=N)
-hits = [t["hit"] for t in throws_data].count(True)
-print("N:", N)
-#print("sample accuracy:", float(hits)/len(throws_data))
+N=200
+def create_models(method='random'):
+    if method == 'random':
+        throws_data = gen.roc_throws(N=N)
+    if method == 'pict':
+        throw_data = None
 
-df = pd.DataFrame.from_records(throws_data)
-v = feature_extraction.DictVectorizer(sparse=False)
-X = v.fit_transform(throws_data)
-X = [t[1:] for t in X]
-y = df["hit"]
+    hits = [t["hit"] for t in throws_data].count(True)
+    print("N:", N)
 
-lr = linear_model.LogisticRegression(max_iter=10000)
-lr.fit(X, y)
-svc = svm.SVC(probability=True)
-svc.fit(X, y)
-nn = neural_network.MLPClassifier(max_iter=10000)
-nn.fit(X, y)
+    df = pd.DataFrame.from_records(throws_data)
+    v = feature_extraction.DictVectorizer(sparse=False)
+    X = v.fit_transform(throws_data)
+    X = [t[1:] for t in X]
+    y = df["hit"]
 
-lr_scores = model_selection.cross_val_score(lr, X, y)
-print("LR: {:.2f} accuracy with stdev {:.4f}".format(lr_scores.mean(), lr_scores.std()))
-svc_scores = model_selection.cross_val_score(svc, X, y)
-print("SVC: {:.2f} accuracy with stdev {:.4f}".format(svc_scores.mean(), svc_scores.std()))
-nn_scores = model_selection.cross_val_score(nn, X, y)
-print("NN: {:.4f} accuracy with stdev {:.4f}".format(nn_scores.mean(), nn_scores.std()))
+    lr = linear_model.LogisticRegression(max_iter=10000)
+    lr.fit(X, y)
+    svc = svm.SVC(probability=True, C=2.0)
+    svc.fit(X, y)
+    nn = neural_network.MLPClassifier(max_iter=10000)
+    nn.fit(X, y)
 
-models = [lr, svc, nn]
-labels = ["Logistic Regression", "Support Vector Classification", "MLPC Classifier"]
-v = feature_extraction.DictVectorizer(sparse=False)
-vis_sheet = gen.sheet_to_data(gen.new_sheet())
-mx = np.arange(-7.5, 7.5, 1.0)
-my = np.arange(-11.5, 20.5, 1.0)
-mps = list()
-for model in models:
-    Z = list()
-    for y in my:
-        Zr = list()
-        for x in mx:
-            pt = (x, y)
-            xythrow = vis_sheet
-            xythrow.update([("x", pt[0]), ("y", pt[1])])
-            X = v.fit_transform(xythrow)
-            p = model.predict_proba(X)[0][1] #generalize
-            Zr.append(p)
-        Z.append(Zr)
-    mps.append(Z)
+    lr_scores = model_selection.cross_val_score(lr, X, y)
+    print("LR: {:.2f} accuracy with stdev {:.4f}".format(lr_scores.mean(), lr_scores.std()))
+    svc_scores = model_selection.cross_val_score(svc, X, y)
+    print("SVC: {:.2f} accuracy with stdev {:.4f}".format(svc_scores.mean(), svc_scores.std()))
+    nn_scores = model_selection.cross_val_score(nn, X, y)
+    print("NN: {:.4f} accuracy with stdev {:.4f}".format(nn_scores.mean(), nn_scores.std()))
 
-fig, axs = plt.subplots(1, 3)
-vis.plot_map(vis_sheet, mx, my, mps, labels=labels, axs=axs)
+    models = [lr, svc, nn]
+    labels = ["Logistic Regression", "Support Vector Classification", "MLPC Classifier"]
+    return models, labels
+
 
 #vis_sheet = gen.new_sheet()
 #vis_throw = gen.sheet_to_data(vis_sheet)

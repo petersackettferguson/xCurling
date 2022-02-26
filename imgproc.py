@@ -82,15 +82,15 @@ def find_centers(img):
 
     return ycs, rcs
 
-imgs = [cv2.imread(url) for url in glob('imgs/*.png')]
-sheets = list()
-for img in imgs:
+#imgs = [cv2.imread(url) for url in glob('imgs/*.png')]
+#sheets = list()
+#for img in imgs:
     img = cv2.cvtColor(img, cv2.COLOR_BGR2HSV)
     ycs, rcs = find_centers(img)
     s = img.shape
     sheets.append(ycs + rcs)
 
-data = gen.sheet_to_data(sheets[0])
-vis.plot_data(gen.sheet_to_data(sheets[0]))
+#data = gen.sheet_to_data(sheets[0])
+#vis.plot_data(gen.sheet_to_data(sheets[0]))
 #print(sheets)
 
