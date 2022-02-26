@@ -12,12 +12,12 @@ from sklearn import model_selection
 
 import matplotlib.pyplot as plt
 
-N=200
+N=160
 def create_models(method='random'):
     if method == 'random':
         throws_data = gen.roc_throws(N=N)
     if method == 'pict':
-        throw_data = None
+        throws_data = imgproc.get_image_data()
 
     hits = [t["hit"] for t in throws_data].count(True)
     print("N:", N)
@@ -28,9 +28,9 @@ def create_models(method='random'):
     X = [t[1:] for t in X]
     y = df["hit"]
 
-    lr = linear_model.LogisticRegression(max_iter=10000)
+    lr = linear_model.LogisticRegression(max_iter=1000, C=100.0)
     lr.fit(X, y)
-    svc = svm.SVC(probability=True, C=2.0)
+    svc = svm.SVC(probability=True, C=1000.0)
     svc.fit(X, y)
     nn = neural_network.MLPClassifier(max_iter=10000)
     nn.fit(X, y)
