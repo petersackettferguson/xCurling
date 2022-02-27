@@ -87,8 +87,15 @@ def new_sheet(n=constants.N_ROCKS, scale=1.0, y_scale=2.0):
 
     return np.asarray(sheet, dtype=object)
 
-def sheet_to_data(sheet):
+def sheet_to_data(sheet, sort=True):
     data = dict()
+    if sort:
+        fsheet = list()
+        for rock in sheet:
+            if rock is not None:
+                fsheet.append(rock)
+        sheet = sorted(fsheet, key=lambda r: r[1] if r is not None else None, reverse=True)
+
     while len(sheet) < constants.N_ROCKS:
         sheet.append(None)
     for (i, rock) in enumerate(sheet):
