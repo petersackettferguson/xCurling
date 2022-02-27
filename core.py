@@ -4,8 +4,8 @@ import vis
 
 import numpy as np
 import pandas as pd
-from sklearn import linear_model, ensemble, neural_network, svm
-from sklearn import feature_extraction, model_selection
+from sklearn import linear_model, ensemble, gaussian_process, neural_network, svm
+from sklearn import feature_extraction, metrics, model_selection
 from sklearn.calibration import CalibratedClassifierCV
 
 import matplotlib.pyplot as plt
@@ -27,6 +27,22 @@ def create_models(models=['rfc', 'svc', 'mplc'], method='random'):
     y = df["hit"]
     X_train, X_test, y_train, y_test = model_selection.train_test_split(X, y)
 
+    mlpc_pg = {
+        'hidden_layer_sizes': [(10), (100), (10, 10), (100, 10), (100, 100)],
+        'activation': ['relu', 'tanh', 'logistic'],
+        'solver': ['adam'],
+        'alpha': [0.0001, 0.001, 0.01, 0.1],
+        'learning_rate': ['constant','adaptive'],
+    }
+
+    mlpc = neural_network.MLPClassifier()
+    #mlpc_c = CalibratedClassifierCV(mlpc, n_jobs=-1)
+    #grid = model_selection.GridSearchCV(mlpc, mlpc_pg, scoring='balanced_accuracy', n_jobs=-1)
+    #grid.fit(X_train, y_train)
+    #print(grid.best_params_)
+    #grid_predictions = grid.predict(X_test)
+    #print("Accuracy: {:.4f}".format(metrics.balanced_accuracy_score(y_test, grid_predictions)))
+
     #lr = linear_model.LogisticRegression(max_iter=1000, C=100.0)
     #lr.fit(X_train, y_train)
 
@@ -40,35 +56,35 @@ def create_models(models=['rfc', 'svc', 'mplc'], method='random'):
     #svc.fit(X_train, y_train)
     #svc_c.fit(X_train, y_train)
 
-    mlpc_relu = neural_network.MLPClassifier(activation='relu', max_iter=10000)
-    mlpc_relu_c = CalibratedClassifierCV(base_estimator=mlpc_relu, n_jobs=-1)
-    mlpc_relu_c.fit(X_train, y_train)
-    mlpc_relu_score = mlpc_relu_c.score(X_test, y_test)
-    print("MLPC (relu) |", mlpc_relu_score)
+    mlpc1 = neural_network.MLPClassifier(alpha=.1, max_iter=1000)
+    mlpc1_c = CalibratedClassifierCV(base_estimator=mlpc1, n_jobs=-1)
+    mlpc1_c.fit(X_train, y_train)
+    mlpc1_predictions = mlpc1_c.predict(X_test)
+    print("MLP Classifier (.1) |", metrics.balanced_accuracy_score(y_test, mlpc1_predictions))
+    
+    mlpc01 = neural_network.MLPClassifier(alpha=.01, max_iter=1000)
+    mlpc01_c = CalibratedClassifierCV(base_estimator=mlpc01, n_jobs=-1)
+    mlpc01_c.fit(X_train, y_train)
+    mlpc01_predictions = mlpc01_c.predict(X_test)
+    print("MLP Classifier (.01) |", metrics.balanced_accuracy_score(y_test, mlpc01_predictions))
 
-    mlpc_tanh = neural_network.MLPClassifier(activation='tanh', max_iter=10000)
-    mlpc_tanh_c = CalibratedClassifierCV(base_estimator=mlpc_tanh, n_jobs=-1)
-    mlpc_tanh_c.fit(X_train, y_train)
-    mlpc_tanh_score = mlpc_tanh_c.score(X_test, y_test)
-    print("MLPC (tanh) |", mlpc_tanh_score)
+    mlpc001 = neural_network.MLPClassifier(alpha=.001, max_iter=1000)
+    mlpc001_c = CalibratedClassifierCV(base_estimator=mlpc001, n_jobs=-1)
+    mlpc001_c.fit(X_train, y_train)
+    mlpc001_predictions = mlpc001_c.predict(X_test)
+    print("MLP Classifier (.001) |", metrics.balanced_accuracy_score(y_test, mlpc001_predictions))
 
-    mlpc_logi = neural_network.MLPClassifier(activation='logistic', max_iter=10000)
-    mlpc_logi_c = CalibratedClassifierCV(base_estimator=mlpc_logi, n_jobs=-1)
-    mlpc_logi_c.fit(X_train, y_train)
-    mlpc_logi_score = mlpc_logi_c.score(X_test, y_test)
-    print("MLPC (logi) |", mlpc_logi_score)
+#    mlpc0001 = neural_network.MLPClassifier(alpha=.0001, max_iter=1000)
+#    mlpc0001_c = CalibratedClassifierCV(base_estimator=mlpc0001, n_jobs=-1)
+#    mlpc0001_c.fit(X_train, y_train)
+#    mlpc0001_predictions = mlpc0001_c.predict(X_test)
+#    print("MLP Classifier (.0001) |", metrics.balanced_accuracy_score(y_test, mlpc0001_predictions))
 
-#    mlpc_lbfgs = neural_network.MLPClassifier(solver='lbfgs', max_iter=1000)
-#    mlpc_lbfgs_c = CalibratedClassifierCV(base_estimator=mlpc_lbfgs, n_jobs=-1)
-#    mlpc_lbfgs_c.fit(X_train, y_train)
-#    mlpc_lbfgs_score = mlpc_lbfgs_c.score(X_test, y_test)
-#    print("MLPC (lbfgs) |", mlpc_lbfgs_score)
-
-#    mlpc_sgd = neural_network.MLPClassifier(solver='sgd', max_iter=1000)
-#    mlpc_sgd_c = CalibratedClassifierCV(base_estimator=mlpc_sgd, n_jobs=-1)
-#    mlpc_sgd_c.fit(X_train, y_train)
-#    mlpc_sgd_score = mlpc_sgd_c.score(X_test, y_test)
-#    print("MLPC (sgd) |", mlpc_sgd_score)
+#    gpc = gaussian_process.GaussianProcessClassifier(n_jobs=-1)
+#    gpc_c = CalibratedClassifierCV(base_estimator=gpc, n_jobs=-1)
+#    gpc_c.fit(X_train, y_train)
+#    gpc_predictions = gpc_c.predict(X_test)
+#    print("GP Classifier |", metrics.balanced_accuracy_score(y_test, gpc_predictions))
 
     #lr_scores = model_selection.cross_val_score(lr, X, y)
     #print("LR: {:.2f} accuracy with stdev {:.4f}".format(lr_scores.mean(), lr_scores.std()))
@@ -87,8 +103,8 @@ def create_models(models=['rfc', 'svc', 'mplc'], method='random'):
 #    mlp_fgs_c_scores = model_selection.cross_val_score(mlp_fgs_c, X, y)
 #    print("MLPC LBFGS (C): {:.2f} accuracy with stdev {:.4f}".format(mlp_fgs_c_scores.mean(), mlp_fgs_c_scores.std()))
 
-    models = [mlpc_relu_c, mlpc_tanh_c, mlpc_logi_c]
-    labels = ["MLP Classifier (relu)", "MLP Classifier (tanh)", "MLP Classifier (logistic)"]
+    models = [mlpc1_c, mlpc01_c, mlpc001_c]
+    labels = ["MLP Classifier (.1)", "MLP Classifier (.01)", "MLP Classifier (.001)", "MLP Classifier (.0001)"]
     return models, labels
 
 
