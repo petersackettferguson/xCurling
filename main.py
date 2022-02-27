@@ -14,6 +14,8 @@ vis_sheet = gen.sheet_to_data(gen.new_sheet())
 mx = np.arange(-7.5, 7.5, 1.0)
 my = np.arange(-11.5, 20.5, 1.0)
 mps = list()
+calprobs: list()
+
 for model in models:
     Z = list()
     for y in my:
@@ -27,6 +29,15 @@ for model in models:
             Zr.append(p)
         Z.append(Zr)
     mps.append(Z)
+#else:
+#    for y in my:
+#        Zr = list()
+#        for x in mx:
+#            pt = [x, y]
+#            print(pt)
+#            p = gen.throw_chance(vis_sheet, pt)
+#            Zr.append(p)
+#        Z.append(Zr)
 
-fig, axs = plt.subplots(1, 3)
+fig, axs = plt.subplots(1, len(models))
 vis.plot_map(vis_sheet, mx, my, mps, labels=labels, axs=axs)

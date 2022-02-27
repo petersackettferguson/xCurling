@@ -88,7 +88,7 @@ def new_sheet(n=constants.N_ROCKS, scale=1.0, y_scale=2.0):
     return np.asarray(sheet, dtype=object)
 
 def sheet_to_data(sheet):
-    data = {}
+    data = dict()
     while len(sheet) < constants.N_ROCKS:
         sheet.append(None)
     for (i, rock) in enumerate(sheet):
@@ -99,6 +99,20 @@ def sheet_to_data(sheet):
         else:
             data.update([(lx, rock[0]), (ly, rock[1])])
     return data
+
+def sheet_from_data(data, throw=False):
+    sheet = list()
+
+    xkeys = ["r{}x".format(i) for i in range(constants.N_ROCKS)]
+    ykeys = ["r{}y".format(i) for i in range(constants.N_ROCKS)]
+    for xk, yk in xkeys, ykeys:
+        pt = (data[xk], data[yk])
+        sheet.append(pt)
+
+    if throw:
+        return sheet, (data['x']. data['y'])
+    else:
+        return sheet
 
 def scale_data(data, throw=True):
     xkeys = ["r{}x".format(i) for i in range(constants.N_ROCKS)]
@@ -133,7 +147,6 @@ def to_rel(data):
 
 def throw_chance(sheet, throw):
     return math.prod([chance(exdiff(d, throw)) for d in filter(lambda r: r is not None, sheet)])
-
 
 def roc_throws(N=constants.N_ENDS):
     throws = list()
