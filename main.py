@@ -7,7 +7,7 @@ import numpy as np
 import matplotlib.pyplot as plt
 from sklearn import feature_extraction
 
-models, labels = core.create_models()
+models, labels = core.create_models(method='pict')
 
 v = feature_extraction.DictVectorizer(sparse=False)
 vis_sheet = gen.sheet_to_data(gen.new_sheet())
@@ -39,5 +39,5 @@ for model in models:
 #            Zr.append(p)
 #        Z.append(Zr)
 
-fig, axs = plt.subplots(1, len(models))
-vis.plot_map(vis_sheet, mx, my, mps, labels=labels, axs=axs)
+#fig, axs = plt.subplots(1, len(models))
+#vis.plot_map(vis_sheet, mx, my, mps, labels=labels, axs=axs)

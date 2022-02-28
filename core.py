@@ -1,5 +1,6 @@
 import constants
 import gen
+import imgproc
 import vis
 
 import numpy as np
@@ -15,7 +16,7 @@ def create_models(models=['rfc', 'svc', 'mplc'], method='random'):
     if method == 'random':
         throws_data = gen.roc_throws(N=N)
     if method == 'pict':
-        throws_data = imgproc.get_image_data()
+        throws_data = imgproc.get_sheets()
 
     #hits = [t["hit"] for t in throws_data].count(True)
     print("N:", N)
@@ -28,20 +29,22 @@ def create_models(models=['rfc', 'svc', 'mplc'], method='random'):
     X_train, X_test, y_train, y_test = model_selection.train_test_split(X, y)
 
     mlpc_pg = {
-        'hidden_layer_sizes': [(10), (100), (10, 10), (100, 10), (100, 100)],
+        'hidden_layer_sizes': [(80), (160), (80, 40), (160, 80)],
         'activation': ['relu', 'tanh', 'logistic'],
         'solver': ['adam'],
-        'alpha': [0.0001, 0.001, 0.01, 0.1],
+        #'alpha': [0.01, 0.01, 0.1, 1],
+        'alpha': [0.1],
         'learning_rate': ['constant','adaptive'],
     }
 
-    mlpc = neural_network.MLPClassifier()
-    #mlpc_c = CalibratedClassifierCV(mlpc, n_jobs=-1)
-    #grid = model_selection.GridSearchCV(mlpc, mlpc_pg, scoring='balanced_accuracy', n_jobs=-1)
-    #grid.fit(X_train, y_train)
-    #print(grid.best_params_)
-    #grid_predictions = grid.predict(X_test)
-    #print("Accuracy: {:.4f}".format(metrics.balanced_accuracy_score(y_test, grid_predictions)))
+    mlpc = neural_network.MLPClassifier(max_iter=1000)
+    grid = model_selection.GridSearchCV(mlpc, mlpc_pg, scoring='balanced_accuracy', n_jobs=-1)
+    grid.fit(X_train, y_train)
+    print(grid.best_params_)
+    mlpc_c = CalibratedClassifierCV(grid.best_estimator_, n_jobs=-1)
+    mlpc_c.fit(X_train, y_train)
+    grid_predictions = mlpc_c.predict(X_test)
+    print("Accuracy: {:.4f}".format(metrics.balanced_accuracy_score(y_test, grid_predictions)))
 
     #lr = linear_model.LogisticRegression(max_iter=1000, C=100.0)
     #lr.fit(X_train, y_train)
@@ -56,6 +59,12 @@ def create_models(models=['rfc', 'svc', 'mplc'], method='random'):
     #svc.fit(X_train, y_train)
     #svc_c.fit(X_train, y_train)
 
+    #mlpco = neural_network.MLPClassifier(alpha=1, max_iter=1000)
+    #mlpco_c = CalibratedClassifierCV(base_estimator=mlpco, n_jobs=-1)
+    #mlpco_c.fit(X_train, y_train)
+    #mlpco_predictions = mlpco_c.predict(X_test)
+    #print("MLP Classifier (1) |", metrics.balanced_accuracy_score(y_test, mlpco_predictions))
+
     mlpc1 = neural_network.MLPClassifier(alpha=.1, max_iter=1000)
     mlpc1_c = CalibratedClassifierCV(base_estimator=mlpc1, n_jobs=-1)
     mlpc1_c.fit(X_train, y_train)
@@ -68,11 +77,11 @@ def create_models(models=['rfc', 'svc', 'mplc'], method='random'):
     mlpc01_predictions = mlpc01_c.predict(X_test)
     print("MLP Classifier (.01) |", metrics.balanced_accuracy_score(y_test, mlpc01_predictions))
 
-    mlpc001 = neural_network.MLPClassifier(alpha=.001, max_iter=1000)
-    mlpc001_c = CalibratedClassifierCV(base_estimator=mlpc001, n_jobs=-1)
-    mlpc001_c.fit(X_train, y_train)
-    mlpc001_predictions = mlpc001_c.predict(X_test)
-    print("MLP Classifier (.001) |", metrics.balanced_accuracy_score(y_test, mlpc001_predictions))
+#    mlpc001 = neural_network.MLPClassifier(alpha=.001, max_iter=1000)
+#    mlpc001_c = CalibratedClassifierCV(base_estimator=mlpc001, n_jobs=-1)
+#    mlpc001_c.fit(X_train, y_train)
+#    mlpc001_predictions = mlpc001_c.predict(X_test)
+#    print("MLP Classifier (.001) |", metrics.balanced_accuracy_score(y_test, mlpc001_predictions))
 
 #    mlpc0001 = neural_network.MLPClassifier(alpha=.0001, max_iter=1000)
 #    mlpc0001_c = CalibratedClassifierCV(base_estimator=mlpc0001, n_jobs=-1)
@@ -103,8 +112,8 @@ def create_models(models=['rfc', 'svc', 'mplc'], method='random'):
 #    mlp_fgs_c_scores = model_selection.cross_val_score(mlp_fgs_c, X, y)
 #    print("MLPC LBFGS (C): {:.2f} accuracy with stdev {:.4f}".format(mlp_fgs_c_scores.mean(), mlp_fgs_c_scores.std()))
 
-    models = [mlpc1_c, mlpc01_c, mlpc001_c]
-    labels = ["MLP Classifier (.1)", "MLP Classifier (.01)", "MLP Classifier (.001)", "MLP Classifier (.0001)"]
+    models = [mlpc1_c, mlpc01_c, mlpc_c]
+    labels = ["MLP Classifier (.1)", "MLP Classifier (.01)", "MLP Classifier (GridSearch)"]
     return models, labels
 
 

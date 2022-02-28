@@ -7,6 +7,8 @@ import cv2
 import numpy as np
 from glob import glob
 
+DEBUG = True
+
 BLU = np.array([150,80,50])
 YEL = np.array([35,80,50])
 RED = np.array([5, 60, 40])
@@ -27,6 +29,10 @@ def find_centers(img):
     res_blue = cv2.bitwise_and(img,img, mask=mask_blue)
     res_yellow = cv2.bitwise_and(img,img, mask=mask_yellow)
     res_red = cv2.bitwise_and(img,img, mask=mask_red)
+
+    cv2.imshow('blue', res_blue)
+    cv2.imshow('yellow', res_yellow)
+    cv2.imshow('red', res_red)
 
     gray_blue = cv2.cvtColor(res_blue, cv2.COLOR_BGR2GRAY)
     gray_yellow = cv2.cvtColor(res_yellow, cv2.COLOR_BGR2GRAY)
@@ -70,19 +76,27 @@ def find_centers(img):
     if tee is None:
         return None
 
+    if DEBUG:
+        debug = thresh_blue + thresh_yellow + thresh_red 
     for c in cnt_y:
         center, radius = cv2.minEnclosingCircle(c)
         if radius > rmin and radius < rmax:
             ycs.append(np.subtract(tee, center) * scale)
+            #if DEBUG:
+                #cv2.circle(center=cv2.Point(center), radius=radius, color=YEL, img=debug)
     
     for c in cnt_r:
         center, radius = cv2.minEnclosingCircle(c)
         if radius > rmin and radius < rmax:
             rcs.append(np.subtract(tee, center) * scale)
+            #if DEBUG:
+                #cv2.circle(center=cv2.Point(center), radius=radius, color=RED, img=debug)
+
+    cv2.imshow('debug', debug)
 
     return ycs, rcs
 
-def get_image_data():
+def get_sheets():
     imgs = [cv2.imread(url) for url in glob('imgs/*.png')]
     sheets = list()
     for img in imgs:
@@ -99,6 +113,6 @@ def get_image_data():
 
     return data
 
-#vis.plot_data(gen.sheet_to_data(sheets[0]))
-#print(sheets)
+sheets = get_sheets()
+vis.plot_data(gen.sheet_to_data(sheets[0]))
 
