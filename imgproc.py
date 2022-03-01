@@ -53,7 +53,7 @@ def find_centers(img):
         #cv2.drawContours(ldbg,[sc],0,(255,0,0),2)
         cv2.rectangle(ldbg, (bx,by), (bx+bw, by+bh), (0,0,255),2)
         cv2.drawContours(ldbg,[box],0,(0,255,0),2)
-        #cv2.imshow('ldbg {}'.format(id(img)), ldbg)
+        cv2.imshow('ldbg {}'.format(id(img)), ldbg)
 
     # BLUE / SCALE #
     mask_blue = cv2.inRange(hsv, BLU0, BLU1)
@@ -89,7 +89,7 @@ def find_centers(img):
         c = [int(f) for f in tee]
         r = int(r12)
         cv2.circle(bdbg, c, r, (255, 0, 0), 6)
-        #cv2.imshow('bdbg {}'.format(id(img)), bdbg)
+        cv2.imshow('bdbg {}'.format(id(img)), bdbg)
 
     # ROCKS #
     mask_yellow = cv2.inRange(hsv, YEL0, YEL1)

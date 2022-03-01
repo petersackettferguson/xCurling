@@ -12,8 +12,8 @@ from sklearn.calibration import CalibratedClassifierCV
 import matplotlib.pyplot as plt
 
 N=1000
-def create_models(models=['rfc', 'svc', 'mplc'], method='random'):
-    if method == 'random':
+def create_models(models=['rfc', 'svc', 'mplc'], method='rand'):
+    if method == 'rand':
         throws_data = gen.roc_throws(N=N)
     if method == 'pict':
         throws_data = imgproc.get_sheets()
@@ -37,14 +37,14 @@ def create_models(models=['rfc', 'svc', 'mplc'], method='random'):
         'learning_rate': ['constant','adaptive'],
     }
 
-    mlpc = neural_network.MLPClassifier(max_iter=1000)
-    grid = model_selection.GridSearchCV(mlpc, mlpc_pg, scoring='balanced_accuracy', n_jobs=-1)
-    grid.fit(X_train, y_train)
-    print(grid.best_params_)
-    mlpc_c = CalibratedClassifierCV(grid.best_estimator_, n_jobs=-1)
-    mlpc_c.fit(X_train, y_train)
-    grid_predictions = mlpc_c.predict(X_test)
-    print("Accuracy: {:.4f}".format(metrics.balanced_accuracy_score(y_test, grid_predictions)))
+    #mlpc = neural_network.MLPClassifier(max_iter=1000)
+    #grid = model_selection.GridSearchCV(mlpc, mlpc_pg, scoring='balanced_accuracy', n_jobs=-1)
+    #grid.fit(X_train, y_train)
+    #print(grid.best_params_)
+    #mlpc_c = CalibratedClassifierCV(grid.best_estimator_, n_jobs=-1)
+    #mlpc_c.fit(X_train, y_train)
+    #grid_predictions = mlpc_c.predict(X_test)
+    #print("Accuracy: {:.4f}".format(metrics.balanced_accuracy_score(y_test, grid_predictions)))
 
     #lr = linear_model.LogisticRegression(max_iter=1000, C=100.0)
     #lr.fit(X_train, y_train)
@@ -64,6 +64,12 @@ def create_models(models=['rfc', 'svc', 'mplc'], method='random'):
     #mlpco_c.fit(X_train, y_train)
     #mlpco_predictions = mlpco_c.predict(X_test)
     #print("MLP Classifier (1) |", metrics.balanced_accuracy_score(y_test, mlpco_predictions))
+
+    mlpca = neural_network.MLPClassifier(alpha=.1, learning_rate='adaptive', max_iter=1000)
+    mlpca_c = CalibratedClassifierCV(base_estimator=mlpca, n_jobs=-1)
+    mlpca_c.fit(X_train, y_train)
+    mlpca_predictions = mlpca_c.predict(X_test)
+    print("MLP Classifier (Adaptive) |", metrics.balanced_accuracy_score(y_test, mlpca_predictions))
 
     mlpc1 = neural_network.MLPClassifier(alpha=.1, max_iter=1000)
     mlpc1_c = CalibratedClassifierCV(base_estimator=mlpc1, n_jobs=-1)
@@ -112,8 +118,8 @@ def create_models(models=['rfc', 'svc', 'mplc'], method='random'):
 #    mlp_fgs_c_scores = model_selection.cross_val_score(mlp_fgs_c, X, y)
 #    print("MLPC LBFGS (C): {:.2f} accuracy with stdev {:.4f}".format(mlp_fgs_c_scores.mean(), mlp_fgs_c_scores.std()))
 
-    models = [mlpc1_c, mlpc01_c, mlpc_c]
-    labels = ["MLP Classifier (.1)", "MLP Classifier (.01)", "MLP Classifier (GridSearch)"]
+    models = [mlpca_c, mlpc1_c, mlpc01_c]
+    labels = ["MLP Classifier (Adaptive)", "MLP Classifier (.1)", "MLP Classifier (.01)", "MLP Classifier (GridSearch)"]
     return models, labels
 
 
