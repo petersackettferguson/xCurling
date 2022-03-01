@@ -10,7 +10,8 @@ from sklearn import feature_extraction
 models, labels = core.create_models(method='pict')
 
 v = feature_extraction.DictVectorizer(sparse=False)
-vis_sheet = gen.sheet_to_data(gen.new_sheet())
+img_sheets = imgproc.get_sheets()
+vis_sheet = img_sheets[0]
 mx = np.arange(-7.5, 7.5, 1.0)
 my = np.arange(-11.5, 20.5, 1.0)
 mps = list()

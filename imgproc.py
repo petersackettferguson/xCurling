@@ -179,7 +179,3 @@ def get_sheets():
 
     return data
 
-sheets = get_sheets()
-for sheet in sheets:
-    vis.plot_data(gen.sheet_to_data(sheet))
-
