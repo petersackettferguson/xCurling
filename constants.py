@@ -1,7 +1,7 @@
 # radius of the rock
 R_ROCK = 0.475
 # number of rock per end
-N_ROCKS = 8
+N_ROCKS = 16
 # number of ends per match
 N_ENDS = 8
 
