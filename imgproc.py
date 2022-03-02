@@ -7,7 +7,7 @@ import cv2
 import numpy as np
 from glob import glob
 
-DEBUG = False
+DEBUG = True
 # makes output match image, but internal processing is mirrored
 FLIP = True
 RES = 1000
@@ -23,37 +23,74 @@ RED2_1 = np.array([180,255,190])
 
 #image must be in HSV format
 def find_centers(img):
-    hsv = cv2.cvtColor(img, cv2.COLOR_BGR2HSV)
     gray = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)
 
     # SHEET #
     _,thresh_gray = cv2.threshold(gray,100,255,cv2.THRESH_BINARY)
-    cnt_g,_ = cv2.findContours(thresh_gray,cv2.RETR_TREE,cv2.CHAIN_APPROX_TC89_KCOS)
+    blur_gray = cv2.blur(thresh_gray, (3,3))
+    canny = cv2.Canny(blur_gray, 100, 200)
+    canny_blur = cv2.blur(canny, (5, 5))
 
     ldbg = cv2.cvtColor(thresh_gray, cv2.COLOR_GRAY2BGR)
 
-    sc = None
-    ma = 0.0
-    for c in cnt_g:
-        a = cv2.contourArea(c)
-        if a > ma:
-            ma = a
-            sc = c
-    #e = 0.1*cv2.arcLength(sc, True)
-    #asc = cv2.approxPolyDP(sc, e, True)
-    bx,by,bw,bh = cv2.boundingRect(sc)
-    lb = bx
-    rb = bx+bw
-    rect = cv2.minAreaRect(sc)
-    box = cv2.boxPoints(rect)
-    box = np.int0(box)
+    lines = cv2.HoughLinesP(canny_blur,1,0.01,10,minLineLength=RES/2)
+    lines = [l[0] for l in lines]
+    MAXSKEW=RES/20
+    sidelines = list()
+    if lines is not None:
+        for line in lines:
+            x1,y1,x2,y2 = line
+            if abs(x2-x1) < MAXSKEW:
+                sidelines.append(line)
+    llines = list()
+    rlines = list()
+
+    warped = img.copy()
+    lb = 0
+    rb = RES
+    for line in sidelines:
+        x1,y1,x2,y2=line
+        if (x1+x2)/2 < RES /2:
+            llines.append(line)
+        else:
+            rlines.append(line)
+    if len(llines) > 0 and len(rlines) > 0:
+        lbound = np.mean(llines,axis=0)
+        rbound = np.mean(rlines,axis=0)
+        l1 = [lbound[0], lbound[1]]
+        l2 = [lbound[2], lbound[3]]
+        r1 = [rbound[0], rbound[1]]
+        r2 = [rbound[2], rbound[3]]
+        if l1[1] > l2[1]:
+            l1, l2 = l2, l1
+        if r1[1] > r2[1]:
+            r1, r2 = r2, r1
+        l2d = [l1[0], l2[1]]
+        r2d = [r1[0], r2[1]]
+
+        ini = np.float32([l1, l2, r1, r2])
+        fin = np.float32([l1, l2d, r1, r2d])
+
+        warp_matrix = cv2.getPerspectiveTransform(ini, fin)
+        warped = cv2.warpPerspective(img,warp_matrix,(RES,RES))
+
+        lb = int(l1[0])
+        rb = int(r1[0])
+
+        if DEBUG:
+            lx1,ly1,lx2,ly2=[int(v) for v in lbound]
+            rx1,ry1,rx2,ry2=[int(v) for v in rbound]
+            cv2.line(ldbg, (lx1,ly1), (lx2,ly2), (0,0,255),2)
+            cv2.line(ldbg, (rx1,ry1), (rx2,ry2), (0,0,255),2)
+
     if DEBUG:
-        cv2.line(ldbg,(lb,0),(lb,RES),(255,0,0))
-        cv2.line(ldbg,(rb,0),(rb,RES),(255,0,0))
-        #cv2.drawContours(ldbg,[sc],0,(255,0,0),2)
-        cv2.rectangle(ldbg, (bx,by), (bx+bw, by+bh), (0,0,255),2)
-        cv2.drawContours(ldbg,[box],0,(0,255,0),2)
-        cv2.imshow('ldbg {}'.format(id(img)), ldbg)
+        cv2.line(ldbg,(lb,0),(lb,RES),(0,255,0))
+        cv2.line(ldbg,(rb,0),(rb,RES),(0,255,0))
+        cv2.line(ldbg,(lb,0),(lb,RES),(0,255,0))
+        cv2.line(ldbg,(rb,0),(rb,RES),(0,255,0))
+
+    hsv = cv2.cvtColor(warped, cv2.COLOR_BGR2HSV)
+    gdbg = cv2.cvtColor(cv2.cvtColor(warped, cv2.COLOR_BGR2GRAY), cv2.COLOR_GRAY2BGR)
 
     # BLUE / SCALE #
     mask_blue = cv2.inRange(hsv, BLU0, BLU1)
@@ -88,8 +125,8 @@ def find_centers(img):
     if DEBUG:
         c = [int(f) for f in tee]
         r = int(r12)
-        cv2.circle(bdbg, c, r, (255, 0, 0), 6)
-        cv2.imshow('bdbg {}'.format(id(img)), bdbg)
+        cv2.circle(bdbg, c, r, (255, 0, 0), 5)
+        cv2.circle(gdbg, c, r, (255, 0, 0), 5)
 
     # ROCKS #
     mask_yellow = cv2.inRange(hsv, YEL0, YEL1)
@@ -133,7 +170,8 @@ def find_centers(img):
                 if DEBUG:
                     ic = [int(f) for f in center]
                     r = int(radius)
-                    cv2.circle(cdbg, ic, r, (0, 240, 240), 6)
+                    cv2.circle(cdbg, ic, r, (0, 240, 240), 5)
+                    cv2.circle(gdbg, ic, r, (0, 240, 240), 5)
     
     for c in cnt_r:
         center, radius = cv2.minEnclosingCircle(c)
@@ -145,11 +183,15 @@ def find_centers(img):
                 if DEBUG:
                     ic = [int(f) for f in center]
                     r = int(radius)
-                    cv2.circle(cdbg, ic, r, (0, 0, 255), 6)
+                    cv2.circle(cdbg, ic, r, (0, 0, 255), 5)
+                    cv2.circle(gdbg, ic, r, (0, 0, 255), 5)
 
     if DEBUG:
-        print("Y: {}, R: {}".format(len(ycs), len(rcs)))
-        cv2.imshow('cdbg {}'.format(id(img)), cdbg)
+        #cv2.imshow('ldbg {}'.format(id(img)), ldbg)
+        #cv2.imshow('bdbg {}'.format(id(img)), bdbg)
+        #cv2.imshow('cdbg {}'.format(id(img)), cdbg)
+        cv2.imshow('debug {}'.format(id(img)), gdbg)
+        cv2.waitKey(0)
 
     return ycs, rcs
 
@@ -162,9 +204,10 @@ def get_sheets():
         # convert to RESxRES square, center cropped with full height
         if x > y:
             mgn = (x-y)//2
-            img = img[:,mgn:mgn+y,:]
-            img = cv2.resize(img, (RES, RES))
+            img = img[:,mgn:-mgn,:]
+            img = cv2.resize(img, (RES, RES), interpolation=cv2.INTER_AREA)
             #cv2.imshow('resized', img)
+            #cv2.waitKey(0)
         if FLIP:
             img = cv2.flip(img, 1)
 

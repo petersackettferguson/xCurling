@@ -12,14 +12,14 @@ from sklearn.calibration import CalibratedClassifierCV
 import matplotlib.pyplot as plt
 
 N=1000
-def create_models(models=['rfc', 'svc', 'mplc'], method='rand'):
+def create_models(models=['rfc', 'svc', 'mplc'], method='rand', n=N):
     if method == 'rand':
-        throws_data = gen.roc_throws(N=N)
+        throws_data = gen.roc_throws(N=n)
     if method == 'pict':
         throws_data = imgproc.get_sheets()
 
     #hits = [t["hit"] for t in throws_data].count(True)
-    print("N:", N)
+    print("N:", n)
 
     df = pd.DataFrame.from_records(throws_data)
     v = feature_extraction.DictVectorizer(sparse=False)
