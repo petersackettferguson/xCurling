@@ -13,16 +13,21 @@ DEBUG = True
 FLIP = True
 RES = 1000
 
+# Options: None, ROTATE_TEE
 WARP_METHOD = "ROTATE_TEE"
+
+R_ADJ = 0.8 # color does not extend to the edge of the rock
+R_THR = 1.15 # rock radius permissibility
+R_FILL = 0.50 # minimum proportion of color filling rock radius
 
 BLU0 = np.array([85,30,30])
 BLU1 = np.array([105,255,255])
-YEL0 = np.array([20,80,130])
-YEL1 = np.array([30,255,220])
+YEL0 = np.array([20,70,130])
+YEL1 = np.array([30,255,250])
 RED1_0 = np.array([0,90,100])
-RED1_1 = np.array([20,255,190])
-RED2_0 = np.array([170,90,100])
-RED2_1 = np.array([180,255,190])
+RED1_1 = np.array([20,255,220])
+RED2_0 = np.array([175,90,100])
+RED2_1 = np.array([180,255,220])
 
 def find_tee(img):
     hsv = cv2.cvtColor(img, cv2.COLOR_BGR2HSV)
@@ -81,9 +86,6 @@ def warp(img, tee=None, method=None):
     lb = 0
     rb = RES
 
-    if method is None:
-        return warped,ldbg,lb,rb
-
     lines = cv2.HoughLinesP(canny_blur,1,0.01,10,minLineLength=RES/2)
     lines = [l[0] for l in lines]
     MAXSKEW=RES/20
@@ -128,7 +130,10 @@ def warp(img, tee=None, method=None):
 
         ini = None
         fin = None
-        if method == "ROTATE_BASE":
+        if method is None or method == "NONE":
+            lb = min((lbfy(0), lbfy(RES)))
+            rb = max((rbfy(0), rbfy(RES)))
+        elif method == "ROTATE_BASE":
             l0 = [lbfy(0), 0]
             r0 = [rbfy(0), 0]
             c = [(l0[0] + r0[0])/2, 0]
@@ -183,8 +188,9 @@ def warp(img, tee=None, method=None):
             ini = np.float32([l0, l1, r0, r1])
             fin = np.float32([l0d, l1d, r0d, r1d])
 
-        warp_matrix = cv2.getPerspectiveTransform(ini, fin)
-        warped = cv2.warpPerspective(img,warp_matrix,(RES,RES))
+        if method is not None or method != "NONE":
+            warp_matrix = cv2.getPerspectiveTransform(ini, fin)
+            warped = cv2.warpPerspective(img,warp_matrix,(RES,RES))
 
         lb = int(l0d[0])
         rb = int(r0d[0])
@@ -203,50 +209,8 @@ def warp(img, tee=None, method=None):
 
     return warped, ldbg, lb, rb
 
-# BROKEN / INCOMPLETE
-def color_correct(img):
-    gray = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)
-    _,thresh_gray = cv2.threshold(gray,180,255,cv2.THRESH_BINARY)
-    sheet = cv2.bitwise_and(img,img, mask=thresh_gray)
-    flat = sheet.reshape((RES*RES, 3))
-    filtered = []
-    for b,g,r in flat:
-        if b != 0 and g != 0 and r != 0:
-            filtered.append([b,g,r])
-
-
-    mb,mg,mr = np.mean(filtered, axis=(0))
-    cfb,cfg,cfr = 250.0/mb, 250.0/mg, 250.0/mr
-    corrected = img * [cfb, cfg, cfr]
-
-    return corrected
-
-
-def find_centers(img):
-    # FIND TEE
-    bdbg, tee, r12 = find_tee(img)
-
-    # WARP SHEET
-    warped,ldbg,lb,rb = warp(img, tee=tee, method=WARP_METHOD)
-    gdbg = cv2.cvtColor(cv2.cvtColor(warped, cv2.COLOR_BGR2GRAY), cv2.COLOR_GRAY2BGR)
-
-    # ADJUST TEE
-    #bdbg, tee, r12 = find_tee(warped)
-    scale = constants.TWELVE / r12
-
-    # COLOR CORRECT
-    #cc = color_correct(warped)
-    wb = cv2.xphoto.createSimpleWB()
-    cc = wb.balanceWhite(warped)
-
-    if DEBUG:
-        c = [int(f) for f in tee]
-        r = int(r12)
-        cv2.circle(gdbg, c, r, (255, 0, 0), 5)
-
-
-    # ROCKS #
-    hsv = cv2.cvtColor(cc, cv2.COLOR_BGR2HSV)
+def find_rocks(img, tee, scale, lb, rb):
+    hsv = cv2.cvtColor(img, cv2.COLOR_BGR2HSV)
     mask_yellow = cv2.inRange(hsv, YEL0, YEL1)
     mask_red1 = cv2.inRange(hsv, RED1_0, RED1_1)
     mask_red2 = cv2.inRange(hsv, RED2_0, RED2_1)
@@ -264,8 +228,7 @@ def find_centers(img):
     _,thresh_yellow = cv2.threshold(blur_yellow,10,255,cv2.THRESH_BINARY)
     _,thresh_red = cv2.threshold(blur_red,10,255,cv2.THRESH_BINARY)
 
-    cdbg = thresh_red + thresh_yellow
-    cdbg = cv2.cvtColor(cdbg, cv2.COLOR_GRAY2BGR)
+    rdbg = cv2.cvtColor(thresh_yellow + thresh_red, cv2.COLOR_GRAY2BGR)
 
     cnt_y,_ = cv2.findContours(thresh_yellow,cv2.RETR_TREE,cv2.CHAIN_APPROX_TC89_KCOS)
     cnt_r,_ = cv2.findContours(thresh_red,cv2.RETR_TREE,cv2.CHAIN_APPROX_TC89_KCOS)
@@ -273,42 +236,76 @@ def find_centers(img):
     ycs = list()
     rcs = list()
 
-    THRESH = 1.18
-    MINFILL = 0.25
-    ADJUST = 0.8 # color does not extend to the edge of the rock
-    rmin = (constants.R_ROCK / scale) * ADJUST / THRESH
-    rmax = (constants.R_ROCK / scale) * ADJUST * THRESH
+    rmin = (constants.R_ROCK / scale) * R_ADJ / R_THR
+    rmax = (constants.R_ROCK / scale) * R_ADJ * R_THR
     for c in cnt_y:
         center, radius = cv2.minEnclosingCircle(c)
         (x, y) = center
         if radius > rmin and radius < rmax and x > lb and x < rb:
             area = cv2.contourArea(c)
-            if area > MINFILL * math.pi * pow(radius, 2):
+            if area > R_FILL * math.pi * pow(radius, 2):
                 ycs.append(np.subtract(tee, center) * scale)
                 if DEBUG:
                     ic = [int(f) for f in center]
                     r = int(radius)
-                    cv2.circle(cdbg, ic, r, (0, 240, 240), 5)
-                    cv2.circle(gdbg, ic, r, (0, 240, 240), 5)
+                    cv2.circle(rdbg, ic, r, (0, 240, 240), 5)
     
     for c in cnt_r:
         center, radius = cv2.minEnclosingCircle(c)
         (x, y) = center
         if radius > rmin and radius < rmax and x > lb and x < rb:
             area = cv2.contourArea(c)
-            if area > MINFILL * math.pi * pow(radius, 2):
+            if area > R_FILL * math.pi * pow(radius, 2):
                 rcs.append(np.subtract(tee, center) * scale)
                 if DEBUG:
                     ic = [int(f) for f in center]
                     r = int(radius)
-                    cv2.circle(cdbg, ic, r, (0, 0, 255), 5)
-                    cv2.circle(gdbg, ic, r, (0, 0, 255), 5)
+                    cv2.circle(rdbg, ic, r, (0, 0, 255), 5)
+
+    return rdbg, ycs, rcs
+
+
+def process_sheet(img):
+    # FIND TEE
+    bdbg, tee, r12 = find_tee(img)
+    scale = constants.TWELVE / r12
+
+    # WARP SHEET
+    warped,ldbg,lb,rb = warp(img, tee=tee, method=WARP_METHOD)
+    gdbg = cv2.cvtColor(cv2.cvtColor(warped, cv2.COLOR_BGR2GRAY), cv2.COLOR_GRAY2BGR)
+
+    # ADJUST TEE
+    #bdbg, tee, r12 = find_tee(warped)
+    #scale = constants.TWELVE / r12
+
+    # COLOR CORRECT
+    wb = cv2.xphoto.createSimpleWB()
+    cc = wb.balanceWhite(warped)
+
+    # LOCATE ROCKS
+    rdbg, ycs, rcs = find_rocks(cc, tee, scale, lb, rb)
 
     if DEBUG:
+        c = [int(f) for f in tee]
+        r = int(r12)
+        cv2.circle(gdbg, c, r, (255, 0, 0), 5)
+
+        cv2.line(gdbg,(lb,0),(lb,RES),(0,255,0), 2)
+        cv2.line(gdbg,(rb,0),(rb,RES),(0,255,0), 2)
+        cv2.line(gdbg,(lb,0),(lb,RES),(0,255,0), 2)
+        cv2.line(gdbg,(rb,0),(rb,RES),(0,255,0), 2)
+
+        for c in ycs:
+            c = [int(f) for f in (scale*c + tee)]
+            cv2.circle(gdbg, c, int(constants.R_ROCK/scale), (0, 240, 240), 5)
+        for c in rcs:
+            c = [int(f) for f in (scale*c + tee)]
+            cv2.circle(gdbg, c, int(constants.R_ROCK/scale), (0, 0, 255), 5)
+
         #cv2.imshow('ldbg {}'.format(id(img)), ldbg)
-        #cv2.imshow('bdbg {}'.format(id(img)), bdbg)
-        #cv2.imshow('cdbg {}'.format(id(img)), cdbg)
-        cv2.imshow('debug {}'.format(id(img)), gdbg)
+        cv2.imshow('bdbg {}'.format(id(img)), bdbg)
+        cv2.imshow('rdbg {}'.format(id(img)), rdbg)
+        #cv2.imshow('debug {}'.format(id(img)), gdbg)
         cv2.waitKey(0)
 
     return ycs, rcs
@@ -329,7 +326,7 @@ def get_sheets():
         if FLIP:
             img = cv2.flip(img, 1)
 
-        ycs, rcs = find_centers(img)
+        ycs, rcs = process_sheet(img)
         sheets.append(ycs + rcs)
 
     data = list()
