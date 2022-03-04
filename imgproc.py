@@ -374,7 +374,7 @@ def get_sheets():
             hit = 0
         if hit is not None:
             ycs, rcs, target = process_sheet(img)
-            if len(ycs + rcs) == 0:
+            if len(ycs + rcs) > 0:
                 sheets.append((ycs + rcs, target, hit))
         else:
             print("ERROR: no result specified for", url)
