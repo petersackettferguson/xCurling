@@ -11,7 +11,7 @@ from sklearn import feature_extraction
 
 #v = feature_extraction.DictVectorizer(sparse=False)
 img_sheets = imgproc.get_sheets()
-vis_sheet = gen.sheet_to_data(img_sheets[1])
+vis_sheet = img_sheets[0]
 #mx = np.arange(-7.5, 7.5, 1.0)
 #my = np.arange(-11.5, 20.5, 1.0)
 #mps = list()

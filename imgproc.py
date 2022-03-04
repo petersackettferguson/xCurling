@@ -20,10 +20,14 @@ R_ADJ = 0.8 # color does not extend to the edge of the rock
 R_THR = 1.15 # rock radius permissibility
 R_FILL = 0.50 # minimum proportion of color filling rock radius
 
+# target mark color
+TGT0 = np.array([50,220,20])
+TGT1 = np.array([60,255,50])
+
 BLU0 = np.array([85,30,30])
 BLU1 = np.array([105,255,255])
 YEL0 = np.array([20,70,130])
-YEL1 = np.array([30,255,250])
+YEL1 = np.array([45,255,250])
 RED1_0 = np.array([0,90,100])
 RED1_1 = np.array([20,255,220])
 RED2_0 = np.array([175,90,100])
@@ -209,6 +213,38 @@ def warp(img, tee=None, method=None):
 
     return warped, ldbg, lb, rb
 
+def find_target(img, tee, scale, lb, rb):
+    hsv = cv2.cvtColor(img, cv2.COLOR_BGR2HSV)
+    mask_green = cv2.inRange(img, TGT0, TGT1)
+    res_green = cv2.bitwise_and(img,img, mask=mask_green)
+    gray_green = cv2.cvtColor(res_green, cv2.COLOR_BGR2GRAY)
+    _,thresh_green = cv2.threshold(gray_green,10,255,cv2.THRESH_BINARY)
+
+    tdbg = cv2.cvtColor(thresh_green, cv2.COLOR_GRAY2BGR)
+
+    cnt_g,_ = cv2.findContours(thresh_green,cv2.RETR_TREE,cv2.CHAIN_APPROX_TC89_KCOS)
+    gcs = list()
+    for c in cnt_g:
+        center, radius = cv2.minEnclosingCircle(c)
+        (x, y) = center
+        if radius < RES/50 and x > lb and x < rb:
+            area = cv2.contourArea(c)
+            if area > .8 * math.pi * pow(radius, 2):
+                gcs.append(np.subtract(tee, center) * scale)
+                if DEBUG:
+                    ic = [int(f) for f in center]
+                    r = int(radius)
+                    cv2.circle(tdbg, ic, r, (0, 240, 240), 1)
+    if DEBUG:
+        print(len(gcs), "targets")
+
+    if len(gcs) >= 1:
+        target = gcs[-1]
+    else:
+        target = None
+
+    return tdbg, target
+
 def find_rocks(img, tee, scale, lb, rb):
     hsv = cv2.cvtColor(img, cv2.COLOR_BGR2HSV)
     mask_yellow = cv2.inRange(hsv, YEL0, YEL1)
@@ -264,7 +300,6 @@ def find_rocks(img, tee, scale, lb, rb):
 
     return rdbg, ycs, rcs
 
-
 def process_sheet(img):
     # FIND TEE
     bdbg, tee, r12 = find_tee(img)
@@ -282,6 +317,9 @@ def process_sheet(img):
     wb = cv2.xphoto.createSimpleWB()
     cc = wb.balanceWhite(warped)
 
+    # LOCATE TARGET MARKING
+    tdbg, target = find_target(cc, tee, scale, lb, rb)
+
     # LOCATE ROCKS
     rdbg, ycs, rcs = find_rocks(cc, tee, scale, lb, rb)
 
@@ -295,26 +333,32 @@ def process_sheet(img):
         cv2.line(gdbg,(lb,0),(lb,RES),(0,255,0), 2)
         cv2.line(gdbg,(rb,0),(rb,RES),(0,255,0), 2)
 
+        if target is not None:
+            tc = [int(f) for f in (-target/scale + tee)]
+            cv2.circle(gdbg, tc, int(5), (0, 255, 0), 5)
         for c in ycs:
-            c = [int(f) for f in (scale*c + tee)]
+            c = [int(f) for f in (-c/scale + tee)]
             cv2.circle(gdbg, c, int(constants.R_ROCK/scale), (0, 240, 240), 5)
         for c in rcs:
-            c = [int(f) for f in (scale*c + tee)]
+            c = [int(f) for f in (-c/scale + tee)]
             cv2.circle(gdbg, c, int(constants.R_ROCK/scale), (0, 0, 255), 5)
 
         #cv2.imshow('ldbg {}'.format(id(img)), ldbg)
-        cv2.imshow('bdbg {}'.format(id(img)), bdbg)
-        cv2.imshow('rdbg {}'.format(id(img)), rdbg)
-        #cv2.imshow('debug {}'.format(id(img)), gdbg)
+        #cv2.imshow('bdbg {}'.format(id(img)), bdbg)
+        cv2.imshow('tdbg {}'.format(id(img)), tdbg)
+        #cv2.imshow('rdbg {}'.format(id(img)), rdbg)
+        cv2.imshow('debug {}'.format(id(img)), gdbg)
         cv2.waitKey(0)
 
-    return ycs, rcs
+    return ycs, rcs, target
 
 def get_sheets():
-    imgs = [cv2.imread(url) for url in glob('imgs/*.png')]
+    urls = glob('imgs/*.png')
+    imgs = [cv2.imread(url) for url in urls]
 
     sheets = list()
-    for img in imgs:
+    for img, url in zip(imgs, urls):
+        print(url)
         y, x, c = img.shape
         # convert to RESxRES square, center cropped with full height
         if x > y:
@@ -326,13 +370,22 @@ def get_sheets():
         if FLIP:
             img = cv2.flip(img, 1)
 
-        ycs, rcs = process_sheet(img)
-        sheets.append(ycs + rcs)
+        hit = None
+        if url[-5] == 'H':
+            hit = 1
+        elif url[-5] == 'M':
+            hit = 0
+        if hit is not None:
+            ycs, rcs, target = process_sheet(img)
+            sheets.append((ycs + rcs, target, hit))
+        else:
+            print("ERROR: no result specified for", url)
+
 
     data = list()
-    for sheet in sheets:
-        # add throw and success?
-        throw = sheet
+    for sheet, target, hit in sheets:
+        throw = gen.sheet_to_data(sheet)
+        throw.update({"x": target[0], "y": target[1], "hit": hit})
         data.append(throw)
 
     return data
