@@ -13,10 +13,12 @@ import matplotlib.pyplot as plt
 
 N=1000
 def create_models(models=['rfc', 'svc', 'mplc'], method='rand', n=N):
+    throws_data = None
     if method == 'rand':
         throws_data = gen.roc_throws(N=n)
-    if method == 'pict':
+    if method == 'img':
         throws_data = imgproc.get_sheets()
+        n = len(throws_data)
 
     #hits = [t["hit"] for t in throws_data].count(True)
     print("N:", n)
@@ -120,7 +122,7 @@ def create_models(models=['rfc', 'svc', 'mplc'], method='rand', n=N):
 
     models = [mlpca_c, mlpc1_c, mlpc01_c]
     labels = ["MLP Classifier (Adaptive)", "MLP Classifier (.1)", "MLP Classifier (.01)", "MLP Classifier (GridSearch)"]
-    return models, labels
+    return models, labels, throws_data
 
 
 #vis_sheet = gen.new_sheet()

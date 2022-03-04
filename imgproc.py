@@ -8,7 +8,7 @@ from cv2 import xphoto
 import numpy as np
 from glob import glob
 
-DEBUG = True
+DEBUG = False
 # makes output match image, but internal processing is mirrored
 FLIP = True
 RES = 1080
@@ -69,7 +69,7 @@ def find_tee(img):
         r = int(r12)
         cv2.circle(bdbg, c, r, (255, 0, 0), 5)
 
-    return bdbg, c, r
+    return bdbg, tee, r12
 
 
 # WARP IMAGE SO SHEET SIDES ARE VERTICAL
@@ -277,11 +277,13 @@ def find_rocks(img, tee, scale, lb, rb):
         if radius > rmin and radius < rmax and x > lb and x < rb:
             area = cv2.contourArea(c)
             if area > R_FILL * math.pi * pow(radius, 2):
-                ycs.append(np.subtract(tee, center) * scale)
-                if DEBUG:
-                    ic = [int(f) for f in center]
-                    r = int(radius)
-                    cv2.circle(rdbg, ic, r, (0, 240, 240), 5)
+                coords = np.subtract(tee, center) * scale
+                if coords[1] > -12.0 and coords[1] < 21.0:
+                    ycs.append(coords)
+                    if DEBUG:
+                        ic = [int(f) for f in center]
+                        r = int(radius)
+                        cv2.circle(rdbg, ic, r, (0, 240, 240), 5)
     
     for c in cnt_r:
         center, radius = cv2.minEnclosingCircle(c)
@@ -289,11 +291,13 @@ def find_rocks(img, tee, scale, lb, rb):
         if radius > rmin and radius < rmax and x > lb and x < rb:
             area = cv2.contourArea(c)
             if area > R_FILL * math.pi * pow(radius, 2):
-                rcs.append(np.subtract(tee, center) * scale)
-                if DEBUG:
-                    ic = [int(f) for f in center]
-                    r = int(radius)
-                    cv2.circle(rdbg, ic, r, (0, 0, 255), 5)
+                coords = np.subtract(tee, center) * scale
+                if coords[1] > -12.0 and coords[1] < 21.0:
+                    rcs.append(coords)
+                    if DEBUG:
+                        ic = [int(f) for f in center]
+                        r = int(radius)
+                        cv2.circle(rdbg, ic, r, (0, 0, 255), 5)
 
     return rdbg, ycs, rcs
 
@@ -355,7 +359,6 @@ def get_sheets():
 
     sheets = list()
     for img, url in zip(imgs, urls):
-        print(url)
         y, x, c = img.shape
         # convert to RESxRES square, center cropped with full height
         if x > y:
