@@ -11,14 +11,14 @@ from glob import glob
 DEBUG = True
 # makes output match image, but internal processing is mirrored
 FLIP = True
-RES = 1000
+RES = 1080
 
 # Options: None, ROTATE_TEE
 WARP_METHOD = "ROTATE_TEE"
 
 R_ADJ = 0.8 # color does not extend to the edge of the rock
 R_THR = 1.15 # rock radius permissibility
-R_FILL = 0.50 # minimum proportion of color filling rock radius
+R_FILL = 0.60 # minimum proportion of color filling rock radius
 
 # target mark color
 TGT0 = np.array([50,220,20])
@@ -43,7 +43,7 @@ def find_tee(img):
     _,thresh_blue = cv2.threshold(gray_blue,10,255,cv2.THRESH_BINARY)
     bdbg = cv2.cvtColor(thresh_blue, cv2.COLOR_GRAY2BGR)
 
-    bcircs = cv2.HoughCircles(thresh_blue,cv2.HOUGH_GRADIENT,2.05,RES/4)[0]
+    bcircs = cv2.HoughCircles(thresh_blue,cv2.HOUGH_GRADIENT,2.7,RES/8)[0]
     bcircs = [list([c for c in h]) for h in bcircs]
 
     r12 = 0.0
@@ -52,7 +52,7 @@ def find_tee(img):
         x, y, radius = c
         center = (x, y)
         if x > RES/3 and x < 2*RES/3 and radius < RES/2 and y > RES/2:
-            if radius > r12:
+            if tee is None or radius > r12 and abs(RES/2-x) < abs(RES/2-tee[0]):
                 r12 = radius
                 tee = center
 
@@ -235,9 +235,6 @@ def find_target(img, tee, scale, lb, rb):
                     ic = [int(f) for f in center]
                     r = int(radius)
                     cv2.circle(tdbg, ic, r, (0, 240, 240), 1)
-    if DEBUG:
-        print(len(gcs), "targets")
-
     if len(gcs) >= 1:
         target = gcs[-1]
     else:
@@ -345,7 +342,7 @@ def process_sheet(img):
 
         #cv2.imshow('ldbg {}'.format(id(img)), ldbg)
         #cv2.imshow('bdbg {}'.format(id(img)), bdbg)
-        cv2.imshow('tdbg {}'.format(id(img)), tdbg)
+        #cv2.imshow('tdbg {}'.format(id(img)), tdbg)
         #cv2.imshow('rdbg {}'.format(id(img)), rdbg)
         cv2.imshow('debug {}'.format(id(img)), gdbg)
         cv2.waitKey(0)
