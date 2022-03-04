@@ -9,7 +9,7 @@ from sklearn import feature_extraction
 
 models, labels, throws = core.create_models(method='img')
 
-vis_sheet = throws[0]
+vis_sheet = throws[2]
 mx = np.arange(-8.5, 8.5, 1.0)
 my = np.arange(-12.5, 21.5, 1.0)
 mps = list()
@@ -27,7 +27,7 @@ for model in models:
             X = v.fit_transform(xythrow)
             if len(X[0]) == 35:
                 X = [t[1:] for t in X]
-            p = model.predict_proba(X)[0][1] #generalize
+            p = model.predict_proba(X)[0][1]
             Zr.append(p)
         Z.append(Zr)
     mps.append(Z)
