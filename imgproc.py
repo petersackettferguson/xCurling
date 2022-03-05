@@ -8,7 +8,6 @@ from cv2 import xphoto
 import numpy as np
 from glob import glob
 
-DEBUG = False
 # makes output match image, but internal processing is mirrored
 FLIP = True
 RES = 1080
@@ -33,7 +32,7 @@ RED1_1 = np.array([20,255,220])
 RED2_0 = np.array([175,90,100])
 RED2_1 = np.array([180,255,220])
 
-def find_tee(img):
+def find_tee(img, DEBUG=False):
     hsv = cv2.cvtColor(img, cv2.COLOR_BGR2HSV)
 
     # FIND TEE
@@ -77,7 +76,7 @@ def find_tee(img):
 # 2: detect lines indicating sides of sheet. Average left and right groups.
 # 3: find the bisecting angle of these lines to find the required rotation
 # 4: calculate warp matrix to rotate + fix perspective
-def warp(img, tee=None, method=None):
+def warp(img, tee=None, method=None, DEBUG=False):
 
     gray = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)
     _,thresh_gray = cv2.threshold(gray,100,255,cv2.THRESH_BINARY)
@@ -213,7 +212,7 @@ def warp(img, tee=None, method=None):
 
     return warped, ldbg, lb, rb
 
-def find_target(img, tee, scale, lb, rb):
+def find_target(img, tee, scale, lb, rb, DEBUG=False):
     hsv = cv2.cvtColor(img, cv2.COLOR_BGR2HSV)
     mask_green = cv2.inRange(img, TGT0, TGT1)
     res_green = cv2.bitwise_and(img,img, mask=mask_green)
@@ -242,7 +241,7 @@ def find_target(img, tee, scale, lb, rb):
 
     return tdbg, target
 
-def find_rocks(img, tee, scale, lb, rb):
+def find_rocks(img, tee, scale, lb, rb, DEBUG=False):
     hsv = cv2.cvtColor(img, cv2.COLOR_BGR2HSV)
     mask_yellow = cv2.inRange(hsv, YEL0, YEL1)
     mask_red1 = cv2.inRange(hsv, RED1_0, RED1_1)
@@ -301,13 +300,13 @@ def find_rocks(img, tee, scale, lb, rb):
 
     return rdbg, ycs, rcs
 
-def process_sheet(img):
+def process_sheet(img, DEBUG=False):
     # FIND TEE
-    bdbg, tee, r12 = find_tee(img)
+    bdbg, tee, r12 = find_tee(img, DEBUG=DEBUG)
     scale = constants.TWELVE / r12
 
     # WARP SHEET
-    warped,ldbg,lb,rb = warp(img, tee=tee, method=WARP_METHOD)
+    warped,ldbg,lb,rb = warp(img, tee=tee, method=WARP_METHOD, DEBUG=DEBUG)
     gdbg = cv2.cvtColor(cv2.cvtColor(warped, cv2.COLOR_BGR2GRAY), cv2.COLOR_GRAY2BGR)
 
     # ADJUST TEE
@@ -319,10 +318,10 @@ def process_sheet(img):
     cc = wb.balanceWhite(warped)
 
     # LOCATE TARGET MARKING
-    tdbg, target = find_target(cc, tee, scale, lb, rb)
+    tdbg, target = find_target(cc, tee, scale, lb, rb, DEBUG=DEBUG)
 
     # LOCATE ROCKS
-    rdbg, ycs, rcs = find_rocks(cc, tee, scale, lb, rb)
+    rdbg, ycs, rcs = find_rocks(cc, tee, scale, lb, rb, DEBUG=DEBUG)
 
     if DEBUG:
         c = [int(f) for f in tee]
@@ -353,7 +352,7 @@ def process_sheet(img):
 
     return ycs, rcs, target
 
-def get_sheets():
+def get_sheets(DEBUG=False):
     urls = glob('imgs/*.png')
     imgs = [cv2.imread(url) for url in urls]
 
@@ -376,7 +375,7 @@ def get_sheets():
         elif url[-5] == 'M':
             hit = 0
         if hit is not None:
-            ycs, rcs, target = process_sheet(img)
+            ycs, rcs, target = process_sheet(img, DEBUG=DEBUG)
             if len(ycs + rcs) > 0:
                 sheets.append((ycs + rcs, target, hit))
         else:

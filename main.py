@@ -7,7 +7,7 @@ import numpy as np
 import matplotlib.pyplot as plt
 from sklearn import feature_extraction
 
-models, labels, throws = core.create_models(method='img')
+models, labels, throws = core.create_models(method='img', DEBUG=True)
 
 vis_sheet = throws[2]
 mx = np.arange(-8.5, 8.5, 1.0)

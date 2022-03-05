@@ -12,12 +12,12 @@ from sklearn.calibration import CalibratedClassifierCV
 import matplotlib.pyplot as plt
 
 N=1000
-def create_models(models=['rfc', 'svc', 'mplc'], method='rand', n=N):
+def create_models(models=['rfc', 'svc', 'mplc'], method='rand', n=N, DEBUG=False):
     throws_data = None
     if method == 'rand':
         throws_data = gen.roc_throws(N=n)
     if method == 'img':
-        throws_data = imgproc.get_sheets()
+        throws_data = imgproc.get_sheets(DEBUG=DEBUG)
         n = len(throws_data)
 
     #hits = [t["hit"] for t in throws_data].count(True)
