@@ -12,7 +12,8 @@ from glob import glob
 FLIP = True
 RES = 1080
 
-# Options: None, ROTATE_TEE
+# Options: None, ROTATE_TEE, ROTATE_BASE, TEE, BASE
+# Warping beyond rotation (TEE, BASE) is currently broken
 WARP_METHOD = "ROTATE_TEE"
 
 R_ADJ = 0.8 # color does not extend to the edge of the rock
