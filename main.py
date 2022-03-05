@@ -23,7 +23,7 @@ for model in models:
         for x in mx:
             pt = (x, y)
             xythrow = vis_sheet
-            xythrow.update([("x", pt[0]), ("y", pt[1])])
+            xythrow.update([("x", pt[0]), ("y", pt[1]), ("hit", None)])
             X = v.fit_transform(xythrow)
             if len(X[0]) == 35:
                 X = [t[1:] for t in X]
