@@ -1,3 +1,4 @@
+import argparse
 import core
 import gen
 import imgproc
@@ -7,7 +8,13 @@ import numpy as np
 import matplotlib.pyplot as plt
 from sklearn import feature_extraction
 
-models, labels, throws = core.create_models(method='img', DEBUG=True)
+DEBUG = False
+
+parser = argparse.ArgumentParser()
+parser.add_argument("--debug", help="Enable debug output", action="store_true")
+args = parser.parse_args()
+
+models, labels, throws = core.create_models(method='img', DEBUG=args.debug)
 
 vis_sheet = throws[2]
 mx = np.arange(-8.5, 8.5, 1.0)
