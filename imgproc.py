@@ -43,7 +43,7 @@ def find_tee(img, DEBUG=False):
     _,thresh_blue = cv2.threshold(gray_blue,10,255,cv2.THRESH_BINARY)
     bdbg = cv2.cvtColor(thresh_blue, cv2.COLOR_GRAY2BGR)
 
-    bcircs = cv2.HoughCircles(thresh_blue,cv2.HOUGH_GRADIENT,2.7,RES/8)[0]
+    bcircs = cv2.HoughCircles(thresh_blue,cv2.HOUGH_GRADIENT,3.1,RES/8,param1=100,param2=120,minRadius=RES//4,maxRadius=RES//2)[0]
     bcircs = [list([c for c in h]) for h in bcircs]
 
     r12 = 0.0
@@ -51,7 +51,7 @@ def find_tee(img, DEBUG=False):
     for c in bcircs:
         x, y, radius = c
         center = (x, y)
-        if x > RES/3 and x < 2*RES/3 and radius < RES/2 and y > RES/2:
+        if x > RES/3 and x < 2*RES/3 and y > RES/2:
             if tee is None or radius > r12 and abs(RES/2-x) < abs(RES/2-tee[0]):
                 r12 = radius
                 tee = center
@@ -358,6 +358,7 @@ def get_sheets(DEBUG=False):
     imgs = [cv2.imread(url) for url in urls]
 
     sheets = list()
+    errors = dict()
     for img, url in zip(imgs, urls):
         y, x, c = img.shape
         # convert to RESxRES square, center cropped with full height
@@ -377,10 +378,23 @@ def get_sheets(DEBUG=False):
             hit = 0
         if hit is not None:
             ycs, rcs, target = process_sheet(img, DEBUG=DEBUG)
-            if len(ycs + rcs) > 0:
-                sheets.append((ycs + rcs, target, hit))
+            if target is not None:
+                if len(ycs + rcs) > 0:
+                    sheets.append((ycs + rcs, target, hit))
+                else:
+                    if DEBUG:
+                        print("ERROR: no rocks found in", url)
+                    errors[url] = "no rocks"
+            else:
+                if DEBUG:
+                    print("ERROR: no target found in", url)
+                errors[url] = "no target"
         else:
-            print("ERROR: no result specified for", url)
+            if DEBUG:
+                print("ERROR: no result specified for", url)
+            errors[url] = "no hit"
+    print(len(errors), "errors")
+    print(errors)
 
 
     data = list()
