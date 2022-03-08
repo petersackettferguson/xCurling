@@ -12,11 +12,13 @@ DEBUG = False
 
 parser = argparse.ArgumentParser()
 parser.add_argument("--debug", help="Enable debug output", action="store_true")
+parser.add_argument("-v", "--view", help="Select sheet to analyze", type=int)
 args = parser.parse_args()
 
 models, labels, throws = core.create_models(method='img', DEBUG=args.debug)
 
-vis_sheet = throws[2]
+v_index = args.view if args.view is not None else np.random.randint(0,len(throws))
+vis_sheet = throws[v_index]
 mx = np.arange(-8.5, 8.5, 1.0)
 my = np.arange(-12.5, 21.5, 1.0)
 mps = list()
